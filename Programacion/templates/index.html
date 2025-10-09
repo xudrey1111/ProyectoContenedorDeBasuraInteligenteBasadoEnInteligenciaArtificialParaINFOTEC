@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Clasificador de Residuos - Prueba Web</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 40px;
+            text-align: center;
+            background-color: #f4f4f9;
+        }
+        .container {
+            background-color: #ffffff;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+            max-width: 600px;
+            margin: auto;
+        }
+        img {
+            max-width: 100%;
+            height: auto;
+            border: 3px solid #ccc;
+            border-radius: 4px;
+            margin-top: 15px;
+        }
+        .result-box {
+            margin-top: 20px;
+            padding: 15px;
+            border-radius: 5px;
+            background-color: #e6f7ff;
+            border: 1px solid #91d5ff;
+            text-align: left;
+        }
+        .result-box p {
+            margin: 5px 0;
+            font-size: 1.1em;
+        }
+        .result-box strong {
+            color: #0050b3;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Clasificador de Residuos IA</h1>
+        <p>Esta página web muestra la imagen de prueba y el resultado de la clasificación simulada por el servidor Flask.</p>
+
+        <h2>Imagen de Prueba Actual</h2>
+        <img src="{{ url_for('static', filename=imagen_path) }}" alt="Imagen de residuo a clasificar">
+        <p><strong>Ruta interna de la imagen:</strong> <code>{{ imagen_path }}</code></p>
+
+        <hr>
+
+        <h2>Resultados de Clasificación (Simulados)</h2>
+        <p>Estos resultados provienen del diccionario generado en el servidor Flask para mostrar la lógica de la clasificación.</p>
+        
+        <div class="result-box">
+            <p><strong>Clase del Modelo:</strong> {{ resultado['clase'] }}</p>
+            <p><strong>Etiqueta de Clasificación (a enviar a ESP32):</strong> {{ resultado['etiqueta'] }}</p>
+        </div>
+        
+        <hr>
+
+        <p><small>El endpoint real de clasificación para el ESP32 es <code>/clasificar</code> (POST).</small></p>
+    </div>
+</body>
+</html>

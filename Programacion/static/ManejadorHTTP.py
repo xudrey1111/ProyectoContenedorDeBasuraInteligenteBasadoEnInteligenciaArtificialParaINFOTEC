@@ -1,9 +1,13 @@
 from flask import Flask, request, jsonify
+from static.pruebaModelos import *
 import socket
 
 class Manejador():
-    def __init__(self):
+    def __init__(self, imagen, modelo):
         self.data=None
+        self.imagen=imagen
+        self.modelo=modelo
+        self.bravo=pruebaModeloIA(imagen,modelo)
 
     def recepcionMensaje(self):
         if not request.is_json:
@@ -16,7 +20,11 @@ class Manejador():
     def enviarMensaje(self):
         if self.data.get("evento") == "objeto identificado":
             print("Servidor: 'Objeto identificado' recibido. Iniciando clasificación (simulada)...")
-            clasificacion = input("Dado que nos falta material, simule la clasificación ('B' o 'N'): ").upper()
+            #reconstruirImagen="" aqui se reconstruye la imagen de los bytes enviados por esp32
+            #self.imagen=reconstruirImagen Aquí se recarga la imagen a la clase
+            procesarImagen = self.bravo.processImage(self.imagen)
+            getNombreClase = self.bravo.predictImage(procesarImagen).get('clase', '')
+            clasificacion = "N" if getNombreClase == "No Biodegradable" else "B"
             response_data = {"status": "ok", "clasificacion": clasificacion}
             print(f"→ Enviando al ESP32 (Respuesta HTTP 200): {response_data}")
             return jsonify(response_data), 200
