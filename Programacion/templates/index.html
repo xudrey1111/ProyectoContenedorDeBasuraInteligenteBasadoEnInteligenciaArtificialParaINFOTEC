@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ESP32 WebSocket Monitor</title>
+    <script src="https://cdn.socket.io/4.5.0/socket.io.min.js"></script>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .container { max-width: 800px; margin: 0 auto; }
+        .status { padding: 10px; margin: 10px 0; border-radius: 5px; }
+        .connected { background-color: #d4edda; border: 1px solid #c3e6cb; }
+        .disconnected { background-color: #f8d7da; border: 1px solid #f5c6cb; }
+        .data-panel { background-color: #f8f9fa; padding: 15px; margin: 10px 0; border-radius: 5px; }
+        .command-panel { background-color: #e9ecef; padding: 15px; margin: 10px 0; border-radius: 5px; }
+        button { padding: 8px 15px; margin: 5px; cursor: pointer; }
+        .log { background-color: #000; color: #0f0; padding: 10px; height: 200px; overflow-y: scroll; font-family: monospace; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Monitor ESP32 - WebSocket</h1>
+        
+        <div id="status" class="status disconnected">
+            Desconectado del servidor
+        </div>
+
+        <div class="data-panel">
+            <h3>Datos del Sensor</h3>
+            <div id="sensorData">Esperando datos...</div>
+        </div>
+
+        <div class="command-panel">
+            <h3>Control ESP32</h3>
+            <button onclick="sendCommand('LED_ON')">Encender LED</button>
+            <button onclick="sendCommand('LED_OFF')">Apagar LED</button>
+            <button onclick="sendCommand('READ_SENSORS')">Leer Sensores</button>
+        </div>
+
+        <div>
+            <h3>Log del Sistema</h3>
+            <div id="log" class="log"></div>
+        </div>
+    </div>
+
+    <script>
+        const socket = io();
+        let connectedESP32 = null;
+
+        // Manejar conexión
+        socket.on('connect', function() {
+            updateStatus('Conectado al servidor', true);
+            addLog('Conectado al servidor WebSocket');
+        });
+
+        socket.on('disconnect', function() {
+            updateStatus('Desconectado del servidor', false);
+            addLog('Desconectado del servidor');
+        });
+
+        // Manejar datos del sensor
+        socket.on('sensor_data', function(data) {
+            displaySensorData(data);
+            addLog(`Datos recibidos: ${JSON.stringify(data.data)}`);
+        });
+
+        // Manejar mensajes del sistema
+        socket.on('system_message', function(data) {
+            addLog(`Sistema: ${data.message}`);
+        });
+
+        // Manejar respuesta de comandos
+        socket.on('command_response', function(data) {
+            addLog(`Comando ejecutado: ${JSON.stringify(data)}`);
+        });
+
+        function updateStatus(message, isConnected) {
+            const statusDiv = document.getElementById('status');
+            statusDiv.textContent = message;
+            statusDiv.className = `status ${isConnected ? 'connected' : 'disconnected'}`;
+        }
+
+        function displaySensorData(data) {
+            const sensorDiv = document.getElementById('sensorData');
+            sensorDiv.innerHTML = `
+                <p><strong>Temperatura:</strong> ${data.data.temperature || 'N/A'}°C</p>
+                <p><strong>Humedad:</strong> ${data.data.humidity || 'N/A'}%</p>
+                <p><strong>Timestamp:</strong> ${data.timestamp}</p>
+            `;
+        }
+
+        function sendCommand(command) {
+            if (connectedESP32) {
+                socket.emit('send_command', {
+                    target_client: connectedESP32,
+                    command: command,
+                    parameters: {}
+                });
+                addLog(`Comando enviado: ${command}`);
+            } else {
+                addLog('Error: No hay ESP32 conectada');
+            }
+        }
+
+        function addLog(message) {
+            const logDiv = document.getElementById('log');
+            const timestamp = new Date().toLocaleTimeString();
+            logDiv.innerHTML += `[${timestamp}] ${message}\n`;
+            logDiv.scrollTop = logDiv.scrollHeight;
+        }
+    </script>
+</body>
+</html>
