@@ -16,11 +16,7 @@ class Manejador():
     def enviarMensaje(self):
         if self.data.get("evento") == "objeto identificado":
             print("Servidor: 'Objeto identificado' recibido. Iniciando clasificación (simulada)...")
-            while True:
-                clasificacion = input("Dado que nos falta material, simule la clasificación ('B' o 'N'): ").upper()
-                if clasificacion in ['B', 'N']:
-                    break
-                print("Entrada inválida. Debe ser 'B' o 'N'.")
+            clasificacion = input("Dado que nos falta material, simule la clasificación ('B' o 'N'): ").upper()
             response_data = {"status": "ok", "clasificacion": clasificacion}
             print(f"→ Enviando al ESP32 (Respuesta HTTP 200): {response_data}")
             return jsonify(response_data), 200
