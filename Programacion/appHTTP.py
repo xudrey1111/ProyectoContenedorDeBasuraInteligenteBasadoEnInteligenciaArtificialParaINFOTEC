@@ -2,8 +2,7 @@ from static.ManejadorHTTP import Manejador
 from flask import Flask, render_template
 
 app = Flask(__name__)
-imagen="C:\\Users\\XxGho\\OneDrive\\Documentos\\Escuela\\Proceso Dual\\Proyecto\\2° Proyecto\\Dataset personalizado\\test\\N\\nobiodegradable0012.jpg"
-alpha = Manejador(imagen,modelo="C:\\Users\\XxGho\\OneDrive\\Documentos\\Escuela\\Proceso Dual\\Proyecto\\2° Proyecto\\Python\\Modelos\\Identificacion de images\\predictWaste_mobilenetv2.h5")
+alpha = Manejador(modelo="C:\\Users\\XxGho\\OneDrive\\Documentos\\Escuela\\Proceso Dual\\Proyecto\\2° Proyecto\\Python\\Modelos\\Identificacion de images\\predictWaste_mobilenetv2.h5")
 
 @app.route('/index', methods=['GET'])
 def index():
@@ -11,7 +10,7 @@ def index():
         'clase': 'No Biodegradable', # Nombre de clase del modelo
         'etiqueta': 'N',              # Etiqueta corta que se enviaría al ESP32
     }
-    return render_template('index.html', imagen_path=imagen, resultado=simulated_result)
+    return render_template('index.html', resultado=simulated_result)
 
 @app.route('/', methods=['POST'])
 def clasificar_objeto():

@@ -6,9 +6,8 @@ import matplotlib.pyplot as plt
 import os
 
 class pruebaModeloIA:
-    def __init__(self, imagen, modelo):
+    def __init__(self, modelo):
         self.modelo = self.loadModel(modelo)
-        self.imagen = imagen
         self.clases = {0: 'Biodegradable', 1: 'No biodegradable'}
 
     def loadModel(self, ruta_modelo):
@@ -17,8 +16,8 @@ class pruebaModeloIA:
         modelo = load_model(ruta_modelo)
         return modelo
 
-    def processImage(self,imagen, target_size=(224, 224)):
-        img = image.load_img(imagen, target_size=target_size)
+    def processImage(self,imagen):
+        img = image.load_img(imagen, target_size=(224, 224))
         img_array = image.img_to_array(img)
         img_array = preprocess_input(img_array)
         img_array = np.expand_dims(img_array, axis=0)
@@ -36,8 +35,8 @@ class pruebaModeloIA:
             'todas_las_probabilidades': predicciones[0].tolist()
         }
 
-    def showResults(self, ruta_imagen, prediccion):
-        img = image.load_img(ruta_imagen)
+    def showResults(self, imagen, prediccion):
+        img = image.load_img(imagen)
         plt.figure(figsize=(8, 6))
         plt.imshow(img)
         plt.title(f"Predicción: {prediccion['clase']} ({prediccion['probabilidad']*100:.2f}%)")
@@ -49,8 +48,9 @@ class pruebaModeloIA:
 
     def run(self):
         try:
-            img_array = self.processImage()
+            imagen="C:\\Users\\XxGho\\OneDrive\\Documentos\\Escuela\\Proceso Dual\\Proyecto\\2° Proyecto\\Dataset personalizado\\test\\N\\nobiodegradable0012.jpg"
+            img_array = self.processImage(imagen)
             prediccion = self.predictImage(img_array)
-            self.showResults(self.imagen, prediccion)
+            self.showResults(imagen,prediccion)
         except Exception as e:
             print(f"\nError: {str(e)}")
