@@ -6,23 +6,22 @@ alpha = Manejador(modelo="C:\\Users\\XxGho\\OneDrive\\Documentos\\Escuela\\Proce
 
 @app.route('/index', methods=['GET'])
 def index():
-    simulated_result = {
-        'clase': 'No Biodegradable', # Nombre de clase del modelo
-        'etiqueta': 'N',              # Etiqueta corta que se enviaría al ESP32
-    }
-    return render_template('index.html', resultado=simulated_result)
+    if alpha.diccionarioIdentificacion is None:
+        resultado_default = {
+            'clase': 'Esperando detección...',
+            'probabilidad': 'N/A',
+            'imagen_path': 'Programacion/Static/Imagenes/placeholder.jpg'
+        }
+        return render_template('index.html', resultado=resultado_default)
+    return render_template('index.html', resultado=alpha.diccionarioIdentificacion)
 
 @app.route('/', methods=['POST'])
 def clasificar_objeto():
-    datos_recibidos = alpha.recepcionMensaje()
+    alpha.recepcionMensaje()
     return alpha.enviarMensaje()
 
 if __name__ == '__main__':
-    ip_servidor = alpha.getIpServidor() 
-    
-    print("--- Servidor Flask iniciado ---")
-    print(f"Dirección local: http://{ip_servidor}:5000/")
     try:
-        app.run(host='0.0.0.0', port=5000, debug=False)
+        app.run(host=alpha.getIpServidor(), port=5000, debug=True)
     except Exception as e:
         print(f"Error al iniciar el servidor: {e}")

@@ -2,7 +2,6 @@
 #include <HTTPClient.h>        // Librería para la comunicación HTTP
 #include <ArduinoJson.h>       // Librería para manejar JSON
 #include "esp_camera.h"        // Librería para la cámara del ESP32-CAM S3
-#include "base64.h"            // Necesitarás una librería de Base64 (ej. `Base64.h` en Arduino Library Manager)
 
 const char* ssid = "IZZI-FA5D";
 const char* password = "QJY5MDZYWMLD";
@@ -27,9 +26,6 @@ const char* servidor = "http://192.168.0.121:5000/";
 
 #define CAM_PIN_PWDN    -1
 #define CAM_PIN_RESET   -1
-// ----------------------------------------------------------------------------
-
-String base64_encode(const unsigned char *data, size_t len);
 
 // ----------------------------------------------------------------------------
 
@@ -78,81 +74,103 @@ bool init_camera() {
 }
 
 /**
- * @brief Envía la detección del objeto por HTTP POST y procesa la respuesta.
- * * Envía un JSON indicando la detección y espera un JSON de respuesta
- * del servidor que contenga el campo "clasificacion" con el valor 'B' o 'N'.
+ * @brief Envía primero la notificación de objeto identificado
  */
-void enviarDeteccionYClasificacion() {
-    if (WiFi.status() == WL_CONNECTED) {
-        // 1. Capturar la imagen
-        camera_fb_t *fb = esp_camera_fb_get();
-        if (!fb) {
-            Serial.println("Fallo la captura de la camara");
-            return;
-        }
-        // 2. Codificar la imagen a Base64
-        // Usando Base64.h (requiere instalación)
-        String image_base64 = base64::encode(fb->buf, fb->len);
-        
-        // Liberar el frame buffer de la cámara
-        esp_camera_fb_return(fb);
+void enviarNotificacionDeteccion() {
         HTTPClient http;
         http.begin(servidor);
-        
+        http.setTimeout(10000);
         http.addHeader("Content-Type", "application/json");
-        DynamicJsonDocument doc(image_base64.length() + 512); // Aumentar tamaño para la imagen
+        
+        DynamicJsonDocument doc(256);
         doc["evento"] = "objeto identificado";
         doc["dispositivo_id"] = WiFi.macAddress();
-        doc["imagen_b64"] = image_base64; // Agregar la imagen en Base64
         
         String jsonPayload;
         serializeJson(doc, jsonPayload);
-        Serial.print("Enviando POST de deteccion a ");
-        Serial.println(servidor);
-        // Serial.print("Payload: "); // NO Imprimir payload completo, es muy largo
-        // Serial.println(jsonPayload);
-        Serial.printf("Tamaño de imagen Base64: %d bytes\n", image_base64.length());
+    
+        Serial.println("Enviando notificación de detección...");
+        int httpResponseCode = http.POST(jsonPayload);
+        if (httpResponseCode > 0) {
+            Serial.printf("Notificación enviada. Código HTTP: %d\n", httpResponseCode);
+        } else {
+            Serial.printf("Error en notificación: %s\n", http.errorToString(httpResponseCode).c_str());
+        }
+        http.end();
+}
+
+/**
+ * @brief Función principal que coordina el envío en dos pasos
+ */
+void enviarImagenComoBytes() {
+        camera_fb_t *fb = esp_camera_fb_get();
+        if (!fb) {
+            Serial.println("Fallo la captura de la cámara");
+            return;
+        }
+        HTTPClient http;
+        http.begin(servidor);
+        http.setTimeout(15000);
+        http.addHeader("Content-Type", "application/json");
+        
+        DynamicJsonDocument doc(JSON_ARRAY_SIZE(fb->len) + 1024);
+        doc["evento"] = "imagen bytes";
+        
+        JsonArray imagenArray = doc.createNestedArray("imagen_bytes");
+        for (size_t i = 0; i < fb->len; i++) {
+            imagenArray.add(fb->buf[i]);
+        }
+        doc["tamano_imagen"] = fb->len;
+        
+        String jsonPayload;
+        serializeJson(doc, jsonPayload);
+        
+        Serial.print("Enviando imagen como bytes. Tamaño: ");
+        Serial.print(fb->len);
+        Serial.print(" bytes, Tamaño JSON: ");
+        Serial.print(jsonPayload.length());
+        Serial.println(" bytes");
+        
         int httpResponseCode = http.POST(jsonPayload);
         
-        // 3. Procesar la respuesta
         if (httpResponseCode > 0) {
-            Serial.printf("Código HTTP de respuesta: %d\n", httpResponseCode);
+            Serial.printf("Imagen enviada. Código HTTP: %d\n", httpResponseCode);
             String respuesta = http.getString();
             Serial.println("Respuesta del servidor:");
             Serial.println(respuesta);
-            // 4. Parsear la respuesta para obtener la clasificación
+            
             DynamicJsonDocument responseDoc(256);
             DeserializationError error = deserializeJson(responseDoc, respuesta);
-            
             if (!error) {
-                // Asume que el servidor responde con un campo llamado "clasificacion"
                 const char* clasificacion = responseDoc["clasificacion"] | "Error";
                 Serial.print("Clasificacion recibida: ");
                 Serial.println(clasificacion);
-                // 5. Procesar el comando de clasificación si es válido
+                
                 if (strlen(clasificacion) == 1 && (clasificacion[0] == 'B' || clasificacion[0] == 'N' || clasificacion[0] == 'b' || clasificacion[0] == 'n')) {
-                    // procesarComando(clasificacion[0]); // Necesitas implementar esta función
                     Serial.printf("Comando procesado: %c\n", clasificacion[0]);
                 } else {
-                    Serial.println("Comando de clasificacion invalido o formato incorrecto.");
+                    Serial.println("Comando de clasificacion invalido.");
                 }
-            } else if (respuesta.length() > 0) {
-                Serial.println("Error al interpretar JSON de respuesta, pero se recibio texto.");
-            } else {
-                Serial.println("No se recibio contenido en la respuesta.");
             }
         } else {
-            Serial.printf("Error en la peticion HTTP: %s\n", http.errorToString(httpResponseCode).c_str());
+            Serial.printf("Error enviando imagen: %s\n", http.errorToString(httpResponseCode).c_str());
         }
+        esp_camera_fb_return(fb);
         http.end();
-    } else {
-        Serial.println("WiFi no conectado. Imposible enviar POST.");
+}
+
+void enviarDeteccionYClasificacion() {
+    if (WiFi.status() == WL_CONNECTED) {
+        enviarNotificacionDeteccion();
+        Serial.println("Esperando 2 segundos antes de enviar imagen...");
+        delay(2000);
+        enviarImagenComoBytes();
     }
 }
+
 void setup() {
     Serial.begin(115200);
     Serial.println("\nIniciando ESP32...");
-    // Inicializar la cámara
     if (!init_camera()) {
         Serial.println("Fallo la inicializacion de la camara. Reiniciando...");
         delay(5000);
@@ -174,22 +192,23 @@ void setup() {
     }
 }
 
-// Nota: Renombré la función en loop para que coincida con la modificada
 void loop() {
-    if (WiFi.status() == WL_CONNECTED) {
-        enviarDeteccionYClasificacion(); 
+    if (Serial.available() > 0) {
+        char comando = Serial.read();
+        while (Serial.available() > 0) {
+            Serial.read();
+        }
+        if (comando == '1') {
+            Serial.println("Comando '1' recibido - Enviando detección...");
+            enviarDeteccionYClasificacion();
+        } else if (comando == '\n' || comando == '\r') {
+            // Ignorar caracteres de nueva línea
+        } else {
+            Serial.print("Comando no reconocido: '");
+            Serial.print(comando);
+            Serial.println("'");
+            Serial.println("Comandos disponibles: '1' - Enviar detección");
+        }
     }
-    delay(10000); 
-
+    delay(100);
 }
-
-// Implementación simple de Base64 Encode (si no usas una librería)
-// OJO: La librería externa Base64.h de Arduino es más robusta. 
-// Es muy recomendable usar la librería externa 'Base64.h' de Adam Rudd
-/*
-String base64_encode(const unsigned char *data, size_t len) {
-    // Implementación manual de Base64 si no usas la librería
-    // Requiere la librería Base64.h
-    return "Base64_Placeholder"; 
-}
-*/

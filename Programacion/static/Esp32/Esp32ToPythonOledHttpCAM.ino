@@ -17,13 +17,13 @@
 #define OLED_RESET -1           // Pin de reset
 
 // Pines para la comunicación I2C con la pantalla OLED
-#define I2C_SDA_PIN 8
-#define I2C_SCL_PIN 9
+#define I2C_SDA_PIN 14
+#define I2C_SCL_PIN 21
 
 // Pines para el sensor ultrasónico y el servomotor
 #define TRIG_PIN 1              // Pin del Trigger del sensor ultrasónico
-#define ECHO_PIN 3              // Pin del Echo del sensor ultrasónico
-#define SERVO_PIN 12            // Pin de control para el servomotor
+#define ECHO_PIN 2              // Pin del Echo del sensor ultrasónico
+#define SERVO_PIN 3            // Pin de control para el servomotor
 #define MAX_DISTANCE 10         // Distancia máxima en cm para detectar un objeto
 
 // --- Configuración de pines de la cámara ESP32-S3 CAM ---

@@ -28,11 +28,9 @@ class pruebaModeloIA:
         clase_predicha = np.argmax(predicciones[0])
         probabilidad = np.max(predicciones[0])
         nombre_clase = self.clases[clase_predicha]
-        
         return {
             'clase': nombre_clase,
-            'probabilidad': float(probabilidad),
-            'todas_las_probabilidades': predicciones[0].tolist()
+            'probabilidad': float(probabilidad)
         }
 
     def showResults(self, imagen, prediccion):
