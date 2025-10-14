@@ -1,31 +1,31 @@
-#include <Adafruit_GFX.h>       // Librería para gráficos
-#include <Adafruit_SSD1306.h>   // Librería para el controlador de pantalla OLED
-#include <Wire.h>               // Librería para la comunicación I2C
+#include <Adafruit_GFX.h>
+#include <Adafruit_SSD1306.h>
+#include <Wire.h>
 
-#include <NewPing.h>            // Librería para el sensor ultrasónico
-#include <ESP32Servo.h>         // Librería para el control del servomotor en ESP32
+#include <NewPing.h>
+#include <ESP32Servo.h>
 
-#include <WiFi.h>               // Librería para la conexión WiFi
-#include <HTTPClient.h>         // Librería para la comunicación HTTP
-#include <ArduinoJson.h>        // Librería para manejar JSON
-#include "esp_camera.h"        // Librería para la cámara del ESP32-CAM S3
+#include <WiFi.h>
+#include <HTTPClient.h>
+#include <ArduinoJson.h>
+#include "esp_camera.h"
 
 // --- Definiciones de hardware y pines ---
 
 // Dimensiones de la pantalla OLED
-#define SCREEN_WIDTH 128        
-#define SCREEN_HEIGHT 64        
-#define OLED_RESET -1           
+#define SCREEN_WIDTH 128
+#define SCREEN_HEIGHT 64
+#define OLED_RESET -1
 
 // Pines para la comunicación I2C con la pantalla OLED
 #define I2C_SDA_PIN 14
 #define I2C_SCL_PIN 21
 
 // Pines para el sensor ultrasónico y el servomotor
-#define TRIG_PIN 1              
-#define ECHO_PIN 2             
-#define SERVO_PIN 3           
-#define MAX_DISTANCE 10       
+#define TRIG_PIN 1
+#define ECHO_PIN 2
+#define SERVO_PIN 3
+#define MAX_DISTANCE 10
 
 // --- Configuración de pines de la cámara ESP32-S3 CAM ---
 #define CAM_PIN_D0      11
@@ -48,35 +48,25 @@
 #define CAM_PIN_PWDN    -1
 #define CAM_PIN_RESET   -1
 
-
 // --- Credenciales de WiFi y servidor HTTP ---
-
 const char* ssid = "IZZI-FA5D";
 const char* password = "QJY5MDZYWMLD";
-const char* servidor = "http://192.168.0.121:5000/"; 
+const char* servidor = "http://192.168.0.121:5000/";
 
 // --- Creación de objetos ---
-
-// Objeto para controlar la pantalla OLED
 Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
-// Objeto para el sensor ultrasónico, con sus pines y distancia máxima
 NewPing sonar(TRIG_PIN, ECHO_PIN, MAX_DISTANCE);
-// Objeto para controlar el servomotor
 Servo servoMotor;
 
 // --- Variables de estado y constantes ---
-
-// Ángulos de los movimientos del servo para cada tipo de basura (ej. 0° y 180°)
 const byte angulos[2] = {0, 180};
-// Comandos esperados para clasificar ('B' para Biodegradable, 'N' para No-biodegradable)
 const char comandos[2] = {'B', 'N'};
-// Velocidad del movimiento del servo (menor valor = más rápido)
 const int velocidad = 10;
 
 // --- Funciones del sistema ---
 
 /**
- * @brief Inicializa la cámara.
+ * @brief Inicializa la cámara con configuración simplificada.
  */
 bool init_camera() {
     camera_config_t config;
@@ -121,21 +111,21 @@ bool init_camera() {
 
 /**
  * @brief Muestra un mensaje temporal en la pantalla OLED por 3 segundos.
- * @param mensaje El texto que se mostrará en la pantalla.
  */
 void mostrarMensajeTemporal(String mensaje) {
-    display.clearDisplay();     // Borra todo el contenido anterior
-    display.setCursor(0, 0);    // Coloca el cursor en la esquina superior izquierda
-    display.println(mensaje);   // Muestra el mensaje
-    display.display();          // Actualiza la pantalla física para que el mensaje sea visible
-    delay(3000);                // Espera 3 segundos
-    display.clearDisplay();     // Borra la pantalla al terminar el tiempo
-    display.display();          // Actualiza la pantalla para que quede en blanco
+    display.clearDisplay();
+    display.setTextSize(1);
+    display.setTextColor(SSD1306_WHITE);
+    display.setCursor(0, 0);
+    display.println(mensaje);
+    display.display();
+    delay(3000);
+    display.clearDisplay();
+    display.display();
 }
 
 /**
  * @brief Mueve el servomotor de forma suave hacia un ángulo objetivo.
- * @param anguloObjetivo El ángulo al que se desea mover el servo.
  */
 void moverServoSuave(int anguloObjetivo) {
     int posicionActual = servoMotor.read();
@@ -154,7 +144,6 @@ void moverServoSuave(int anguloObjetivo) {
 
 /**
  * @brief Mueve el servo a un ángulo específico y luego lo regresa al centro.
- * @param anguloObjetivo El ángulo al que se desea mover el servo antes de regresar.
  */
 void moverYVolverSuave(int anguloObjetivo) {
     moverServoSuave(anguloObjetivo);
@@ -164,7 +153,6 @@ void moverYVolverSuave(int anguloObjetivo) {
 
 /**
  * @brief Procesa los comandos recibidos y mueve el servo.
- * @param cmd El comando de clasificación recibido ('B' o 'N').
  */
 void procesarComando(char cmd) {
     for (int i = 0; i < 2; i++) {
@@ -180,34 +168,41 @@ void procesarComando(char cmd) {
     }
     Serial.println("Comando de clasificacion invalido o no reconocido.");
 }
-/**
- * @brief Envía que maneja el envio del objeto identificado
- */
-void enviarNotificacionDeteccion() {
-        HTTPClient http;
-        http.begin(servidor);
-        http.setTimeout(10000);
-        http.addHeader("Content-Type", "application/json");
-        
-        DynamicJsonDocument doc(256);
-        doc["evento"] = "objeto identificado";
-        doc["dispositivo_id"] = WiFi.macAddress();
-        
-        String jsonPayload;
-        serializeJson(doc, jsonPayload);
-    
-        Serial.println("Enviando notificación de detección...");
-        int httpResponseCode = http.POST(jsonPayload);
-        if (httpResponseCode > 0) {
-            Serial.printf("Notificación enviada. Código HTTP: %d\n", httpResponseCode);
-        } else {
-            Serial.printf("Error en notificación: %s\n", http.errorToString(httpResponseCode).c_str());
-        }
-        http.end();
-}
 
 /**
- * @brief Función que maneja el envio de bytes de la imagen
+ * @brief Envía notificación de detección al servidor.
+ */
+void enviarNotificacionDeteccion() {
+    if (WiFi.status() != WL_CONNECTED) {
+        Serial.println("WiFi no conectado para enviar notificación");
+        return;
+    }
+    
+    HTTPClient http;
+    http.begin(servidor);
+    http.setTimeout(10000);
+    http.addHeader("Content-Type", "application/json");
+    
+    DynamicJsonDocument doc(256);
+    doc["evento"] = "objeto identificado";
+    doc["dispositivo_id"] = WiFi.macAddress();
+    
+    String jsonPayload;
+    serializeJson(doc, jsonPayload);
+
+    Serial.println("Enviando notificación de detección...");
+    int httpResponseCode = http.POST(jsonPayload);
+    if (httpResponseCode > 0) {
+        Serial.printf("Notificación enviada. Código HTTP: %d\n", httpResponseCode);
+    } else {
+        Serial.printf("Error en notificación: %s\n", http.errorToString(httpResponseCode).c_str());
+    }
+    http.end();
+}
+
+
+/**
+ * @brief Función principal que coordina el envío en dos pasos
  */
 void enviarImagenComoBytes() {
         camera_fb_t *fb = esp_camera_fb_get();
@@ -250,9 +245,12 @@ void enviarImagenComoBytes() {
             DeserializationError error = deserializeJson(responseDoc, respuesta);
             if (!error) {
                 const char* clasificacion = responseDoc["clasificacion"] | "Error";
+                Serial.print("Clasificacion recibida: ");
+                Serial.println(clasificacion);
+                
                 if (strlen(clasificacion) == 1 && (clasificacion[0] == 'B' || clasificacion[0] == 'N' || clasificacion[0] == 'b' || clasificacion[0] == 'n')) {
                     Serial.printf("Comando procesado: %c\n", clasificacion[0]);
-                    procesarComando(clasificacion[0]);
+                    procesarComando(clasificacion[0])
                 } else {
                     Serial.println("Comando de clasificacion invalido.");
                 }
@@ -263,19 +261,21 @@ void enviarImagenComoBytes() {
         esp_camera_fb_return(fb);
         http.end();
 }
+
 /**
  * @brief Función principal que coordina el envío en dos pasos
  */
 void enviarDeteccionYClasificacion() {
     if (WiFi.status() == WL_CONNECTED) {
         enviarNotificacionDeteccion();
-        delay(2000);
+        delay(1000);
         enviarImagenComoBytes();
+    } else {
+        Serial.println("WiFi no conectado, no se puede enviar detección");
     }
 }
 
-// --- Configuración inicial (se ejecuta una vez) ---
-
+// --- Configuración inicial ---
 void setup() {
     Serial.begin(115200);
     delay(1000);
@@ -338,21 +338,40 @@ void setup() {
     Serial.println("Sistema listo");
 }
 
-// --- Bucle principal del programa ---
-
+// --- Bucle principal ---
 void loop() {
-    // Variable estática para controlar el tiempo entre detecciones (debounce)
     static unsigned long ultima_deteccion = 0;
     unsigned long tiempo_actual = millis();
     
-    // Obtiene la distancia en centímetros
-    int distancia = sonar.ping_cm(); 
+    // Leer sensor de distancia
+    int distancia = sonar.ping_cm();
     
-    // Lógica de detección: si se detecta un objeto (distancia válida y dentro del rango),
-    // y ha pasado suficiente tiempo desde la última detección (3 segundos de debounce).
-    if (distancia > 0 && distancia < MAX_DISTANCE && (tiempo_actual - ultima_deteccion) > 3000) {
-        mostrarMensajeTemporal("Objeto identificado");
-        enviarDeteccionYClasificacion();
+    // Procesar comandos seriales
+    if (Serial.available() > 0) {
+        char comando = Serial.read();
+        // Limpiar buffer serial
+        while (Serial.available() > 0) {
+            Serial.read();
+        }
+        
+        if (comando == '1') {
+            if ((tiempo_actual - ultima_deteccion) > 3000) {
+                ultima_deteccion = tiempo_actual;
+                Serial.println("Comando de detección recibido");
+                mostrarMensajeTemporal("Objeto detectado");
+                enviarDeteccionYClasificacion();
+            } else {
+                Serial.println("Espera entre detecciones");
+            }
+        } else if (comando == '\n' || comando == '\r') {
+            // Ignorar caracteres de nueva línea
+        } else {
+            Serial.print("Comando no reconocido: '");
+            Serial.print(comando);
+            Serial.println("'");
+            Serial.println("Comandos: '1' - Enviar detección");
+        }
     }
-    delay(50); // Pequeño delay para no saturar el loop
+    
+    delay(100);
 }

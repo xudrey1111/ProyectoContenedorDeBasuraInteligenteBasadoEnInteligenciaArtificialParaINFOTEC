@@ -25,7 +25,7 @@ class Manejador():
     def enviarMensaje(self):
         evento = self.data.get("evento")
         if evento == "objeto identificado":
-            print(f"Servidor: Objeto identificado iniciando modelo de ia..")
+            print(f"Servidor: Objeto identificado iniciando modelo de ia")
             return jsonify({"status": "ok", "message": "Notificación recibida"}), 200
         elif evento == "imagen bytes":
             imagen_bytes_array = self.data.get("imagen_bytes")
