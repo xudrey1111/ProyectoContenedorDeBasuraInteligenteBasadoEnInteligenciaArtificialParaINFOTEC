@@ -9,8 +9,8 @@ def index():
     if alpha.diccionarioIdentificacion is None:
         resultado_default = {
             'clase': 'Esperando detección...',
-            'probabilidad': 'N/A',
-            'imagen_path': 'Programacion/Static/Imagenes/placeholder.jpg'
+            'probabilidad': 0.0,
+            'imagen_path': 'Imagenes/placeholder.jpg'
         }
         return render_template('index.html', resultado=resultado_default)
     return render_template('index.html', resultado=alpha.diccionarioIdentificacion)

@@ -41,7 +41,7 @@ class Manejador():
                 self.diccionarioIdentificacion = self.bravo.predictImage(procesarImagen)
                 if imagen_path:
                     nombre_archivo = os.path.basename(imagen_path)
-                    ruta_web = f"imagenes/{nombre_archivo}"  # Usar siempre / para web
+                    ruta_web = f"imagenes/{nombre_archivo}" 
                     self.diccionarioIdentificacion['imagen_path'] = ruta_web
                 getNombreClase = self.diccionarioIdentificacion.get('clase', '')
                 clasificacion = "N" if getNombreClase == "No Biodegradable" else "B"
