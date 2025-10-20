@@ -10,9 +10,10 @@ class Manejador():
         self.data=None
         self.imagen=None
         self.diccionarioIdentificacion=None
+        self.ultimaImagenCapturada = None
+
         self.bravo=pruebaModeloIA(modelo)
         self.imagenes_dir = os.path.join('Programacion','static', 'imagenes')
-        self.ultimaImagenCapturada = None
 
     def recepcionMensaje(self):
         if not request.is_json:
@@ -39,18 +40,29 @@ class Manejador():
                 self.imagen = BytesIO(imagen_bytes)
                 procesarImagen = self.bravo.processImage(self.imagen)
                 self.diccionarioIdentificacion = self.bravo.predictImage(procesarImagen)
-                if imagen_path:
-                    nombre_archivo = os.path.basename(imagen_path)
-                    ruta_web = f"imagenes/{nombre_archivo}" 
-                    self.diccionarioIdentificacion['imagen_path'] = ruta_web
+                getProbabilidadClase = self.diccionarioIdentificacion.get('probabilidad', 0)
                 getNombreClase = self.diccionarioIdentificacion.get('clase', '')
-                clasificacion = "N" if getNombreClase == "No Biodegradable" else "B"
-                response_data = {
-                    "status": "ok", 
-                    "clasificacion": clasificacion,
-                    "clase_detectada": getNombreClase
-                }
-                return jsonify(response_data), 200
+                if getProbabilidadClase <= 0.7:
+                    print(f"Servidor: Confianza insuficiente ({getProbabilidadClase*100:.2f}%), solicitando reintento")
+                    response_data = {
+                        "status": "reintentar", 
+                        "message": "Confianza insuficiente, por favor reintente",
+                        "confianza_actual": float(getProbabilidadClase)
+                    }
+                    return jsonify(response_data), 200
+                else:
+                    if imagen_path:
+                        nombre_archivo = os.path.basename(imagen_path)
+                        ruta_web = f"imagenes/{nombre_archivo}" 
+                        self.diccionarioIdentificacion['imagen_path'] = ruta_web
+                    clasificacion = "N" if getNombreClase == "No Biodegradable" else "B"
+                    response_data = {
+                        "status": "ok", 
+                        "clasificacion": clasificacion,
+                        "clase_detectada": getNombreClase,
+                        "confianza": float(getProbabilidadClase)
+                    }
+                    return jsonify(response_data), 200
             except Exception as e:
                 print(f"Servidor: Error al procesar la imagen: {str(e)}")
                 return jsonify({"status": "error", "message": f"Error al procesar la imagen: {str(e)}"}), 500

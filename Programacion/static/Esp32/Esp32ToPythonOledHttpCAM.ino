@@ -122,13 +122,16 @@ bool init_camera() {
 /**
  * @brief Muestra un mensaje temporal en la pantalla OLED por 3 segundos.
  * @param mensaje El texto que se mostrará en la pantalla.
+ * @param tamano El tamaño de texto que se mostrará en la pantalla.
+ * @param tiempo El tiempo en que el texto que se mostrará en la pantalla.
  */
-void mostrarMensajeTemporal(String mensaje) {
+void mostrarMensajeTemporal(String mensaje, int tamano = 1, int tiempo = 3000) {
     display.clearDisplay();     // Borra todo el contenido anterior
+    display.setTextSize(tamano);     // Tamaño de letra doble (más grande y legible)
     display.setCursor(0, 0);    // Coloca el cursor en la esquina superior izquierda
     display.println(mensaje);   // Muestra el mensaje
     display.display();          // Actualiza la pantalla física para que el mensaje sea visible
-    delay(3000);                // Espera 3 segundos
+    delay(tiempo);                // Espera 3 segundos
     display.clearDisplay();     // Borra la pantalla al terminar el tiempo
     display.display();          // Actualiza la pantalla para que quede en blanco
 }
@@ -171,13 +174,14 @@ void procesarComando(char cmd) {
         if (cmd == comandos[i] || cmd == tolower(comandos[i])) {
             moverYVolverSuave(angulos[i]);
             if (cmd == 'B' || cmd == 'b') {
-                mostrarMensajeTemporal("Basura\nBiodegradable");
+                mostrarMensajeTemporal("Basura\nBiodegradable", 2, 3000);
             } else {
-                mostrarMensajeTemporal("Basura\nNo-Biodegradable");
+                mostrarMensajeTemporal("Basura\nNo-Biodegradable", 2, 3000);
             }
             return;
         }
     }
+    mostrarMensajeTemporal("Comando de clasificacion invalido o no reconocido", 1, 3000);
     Serial.println("Comando de clasificacion invalido o no reconocido.");
 }
 /**
@@ -246,23 +250,45 @@ void enviarImagenComoBytes() {
             Serial.println("Respuesta del servidor:");
             Serial.println(respuesta);
             
-            DynamicJsonDocument responseDoc(256);
+            DynamicJsonDocument responseDoc(512);
             DeserializationError error = deserializeJson(responseDoc, respuesta);
             if (!error) {
-                const char* clasificacion = responseDoc["clasificacion"] | "Error";
-                if (strlen(clasificacion) == 1 && (clasificacion[0] == 'B' || clasificacion[0] == 'N' || clasificacion[0] == 'b' || clasificacion[0] == 'n')) {
-                    Serial.printf("Comando procesado: %c\n", clasificacion[0]);
-                    procesarComando(clasificacion[0]);
-                } else {
-                    Serial.println("Comando de clasificacion invalido.");
+                const char* status = responseDoc["status"] | "error";
+                
+                if (strcmp(status, "reintentar") == 0) {
+                    const char* mensaje = responseDoc["message"] | "Confianza insuficiente";
+                    float confianza = responseDoc["confianza_actual"] | 0.0;
+                    
+                    Serial.printf("Confianza insuficiente: %.2f%%, mensaje: %s\n", confianza * 100, mensaje);
+                    mostrarMensajeTemporal("Confianza baja\nReintente", 2, 3000);
+                    
+                    delay(3000);
+                    
                 }
+                else if (strcmp(status, "ok") == 0) {
+                    const char* clasificacion = responseDoc["clasificacion"] | "Error";
+                    if (strlen(clasificacion) == 1 && (clasificacion[0] == 'B' || clasificacion[0] == 'N')) {
+                        Serial.printf("Comando procesado: %c\n", clasificacion[0]);
+                        procesarComando(clasificacion[0]);
+                    } else {
+                        Serial.println("Comando de clasificacion invalido.");
+                    }
+                } else {
+                    Serial.println("Error en la respuesta del servidor.");
+                    mostrarMensajeTemporal("Error servidor", 1, 3000);
+                }
+            } else {
+                Serial.println("Error parseando respuesta JSON");
+                mostrarMensajeTemporal("Error JSON", 1, 3000);
             }
         } else {
             Serial.printf("Error enviando imagen: %s\n", http.errorToString(httpResponseCode).c_str());
+            mostrarMensajeTemporal("Error envio", 1, 3000);
         }
         esp_camera_fb_return(fb);
         http.end();
 }
+
 /**
  * @brief Función principal que coordina el envío en dos pasos
  */
@@ -280,8 +306,6 @@ void setup() {
     Serial.begin(115200);
     delay(1000);
 
-    Serial.println("Iniciando sistema...");
-
     // Inicializar I2C primero
     Wire.begin(I2C_SDA_PIN, I2C_SCL_PIN);
     
@@ -290,12 +314,7 @@ void setup() {
         Serial.println(F("Error en la inicializacion de la pantalla OLED"));
     } else {
         Serial.println("Pantalla OLED inicializada");
-        display.clearDisplay();
-        display.setTextSize(1);
-        display.setTextColor(SSD1306_WHITE);
-        display.setCursor(0, 0);
-        display.println("Sistema iniciando");
-        display.display();
+        mostrarMensajeTemporal("Sistema iniciando", 1, 2000);
     }
 
     // Inicializar servo
@@ -306,14 +325,14 @@ void setup() {
     // Inicializar cámara
     if (!init_camera()) {
         Serial.println("Fallo la inicializacion de la camara");
-        mostrarMensajeTemporal("Error Camara");
+        mostrarMensajeTemporal("Error Camara", 1, 3000);
     } else {
-        Serial.println("Camara inicializada correctamente");
+        mostrarMensajeTemporal("Camara inicializada correctamente", 1, 3000);
     }
 
     // Conexión a WiFi
     Serial.println("Conectando a WiFi...");
-    mostrarMensajeTemporal("Conectando WiFi");
+    mostrarMensajeTemporal("Conectando WiFi", 1, 2000);
     WiFi.begin(ssid, password);
     
     int intentos = 0;
@@ -330,12 +349,10 @@ void setup() {
         mostrarMensajeTemporal("WiFi OK\nIP: " + WiFi.localIP().toString());
     } else {
         Serial.println("\nError de conexión WiFi!");
-        mostrarMensajeTemporal("Error WiFi");
+        mostrarMensajeTemporal("Error WiFi", 1, 3000);
     }
-    
-    display.clearDisplay();
-    display.display();
     Serial.println("Sistema listo");
+    mostrarMensajeTemporal("Sistema listo", 1, 2000);
 }
 
 // --- Bucle principal del programa ---
@@ -351,7 +368,7 @@ void loop() {
     // Lógica de detección: si se detecta un objeto (distancia válida y dentro del rango),
     // y ha pasado suficiente tiempo desde la última detección (3 segundos de debounce).
     if (distancia > 0 && distancia < MAX_DISTANCE && (tiempo_actual - ultima_deteccion) > 3000) {
-        mostrarMensajeTemporal("Objeto identificado");
+        mostrarMensajeTemporal("Objeto identificado", 2, 2000);
         enviarDeteccionYClasificacion();
     }
     delay(50); // Pequeño delay para no saturar el loop
