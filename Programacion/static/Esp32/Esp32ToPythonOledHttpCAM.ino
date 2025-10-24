@@ -18,8 +18,8 @@
 #define OLED_RESET -1           
 
 // Pines para la comunicación I2C con la pantalla OLED
-#define I2C_SDA_PIN 14
-#define I2C_SCL_PIN 21
+#define I2C_SDA_PIN 42
+#define I2C_SCL_PIN 41
 
 // Pines para el sensor ultrasónico y el servomotor
 #define TRIG_PIN 1              
@@ -72,6 +72,8 @@ const byte angulos[2] = {0, 180};
 const char comandos[2] = {'B', 'N'};
 // Velocidad del movimiento del servo (menor valor = más rápido)
 const int velocidad = 10;
+// Variable para trackear estado de OLED
+bool displayInicializada = false;
 
 // --- Funciones del sistema ---
 
@@ -104,11 +106,11 @@ bool init_camera() {
     config.pin_reset = CAM_PIN_RESET;
 
     config.xclk_freq_hz = 20000000;
-    config.frame_size = FRAMESIZE_CIF;
+    config.frame_size = FRAMESIZE_240X240; 
     config.pixel_format = PIXFORMAT_JPEG;
     config.grab_mode = CAMERA_GRAB_WHEN_EMPTY;
     config.fb_location = CAMERA_FB_IN_DRAM;
-    config.jpeg_quality = 30;
+    config.jpeg_quality = 10; 
     config.fb_count = 1;
     
     int err = esp_camera_init(&config);
@@ -120,20 +122,70 @@ bool init_camera() {
 }
 
 /**
- * @brief Muestra un mensaje temporal en la pantalla OLED por 3 segundos.
- * @param mensaje El texto que se mostrará en la pantalla.
- * @param tamano El tamaño de texto que se mostrará en la pantalla.
- * @param tiempo El tiempo en que el texto que se mostrará en la pantalla.
+ * @brief Inicializa de forma robusta la pantalla oled, necesario
  */
+ bool inicializarOLED() {
+    Serial.println("Inicializando OLED...");
+    
+    // Detener I2C si ya estaba inicializado
+    Wire.end();
+    delay(100);
+    
+    // Inicializar I2C con los pines específicos
+    bool i2cIniciado = Wire.begin(I2C_SDA_PIN, I2C_SCL_PIN);
+    if (!i2cIniciado) {
+        Serial.println("Error: No se pudo iniciar I2C");
+        return false;
+    }
+    
+    // Esperar a que el bus I2C esté estable
+    delay(200);
+    
+    // Intentar inicializar display con ambas direcciones
+    bool displayInicializado = false;
+    
+    if(display.begin(SSD1306_SWITCHCAPVCC, 0x3C)) {
+        Serial.println("OLED encontrado en 0x3C");
+        displayInicializado = true;
+    } else {
+        Serial.println("Falló 0x3C, intentando 0x3D...");
+        delay(100);
+        if(display.begin(SSD1306_SWITCHCAPVCC, 0x3D)) {
+            Serial.println("OLED encontrado en 0x3D");
+            displayInicializado = true;
+        }
+    }
+    
+    if (displayInicializado) {
+        display.clearDisplay();
+        display.setTextSize(2);
+        display.setTextColor(SSD1306_WHITE);
+        display.setCursor(0, 0);
+        display.println("OLED OK");
+        display.display();
+        delay(1000);
+        return true;
+    } else {
+        Serial.println("Error: No se pudo inicializar OLED en ninguna direccion");
+        return false;
+    }
+}
+
+// --- Resto de funciones (sin cambios en la lógica, pero con mejoras de robustez) ---
 void mostrarMensajeTemporal(String mensaje, int tamano = 1, int tiempo = 3000) {
-    display.clearDisplay();     // Borra todo el contenido anterior
-    display.setTextSize(tamano);     // Tamaño de letra doble (más grande y legible)
-    display.setCursor(0, 0);    // Coloca el cursor en la esquina superior izquierda
-    display.println(mensaje);   // Muestra el mensaje
-    display.display();          // Actualiza la pantalla física para que el mensaje sea visible
-    delay(tiempo);                // Espera 3 segundos
-    display.clearDisplay();     // Borra la pantalla al terminar el tiempo
-    display.display();          // Actualiza la pantalla para que quede en blanco
+    if (displayInicializada) {
+        display.clearDisplay();
+        display.setTextSize(tamano);
+        display.setTextColor(SSD1306_WHITE);
+        display.setCursor(0, 0);
+        display.println(mensaje);
+        display.display();
+        delay(tiempo);
+        display.clearDisplay();
+        display.display();
+    } else {
+        Serial.println("OLED MSG: " + mensaje);
+    }
 }
 
 /**
@@ -300,39 +352,33 @@ void enviarDeteccionYClasificacion() {
     }
 }
 
-// --- Configuración inicial (se ejecuta una vez) ---
 
+// --- Configuración inicial (se ejecuta una vez) ---
 void setup() {
     Serial.begin(115200);
-    delay(1000);
+    delay(2000);  // Delay crítico para estabilidad
 
-    // Inicializar I2C primero
-    Wire.begin(I2C_SDA_PIN, I2C_SCL_PIN);
-    
-    // Inicializar pantalla OLED
-    if (!display.begin(SSD1306_SWITCHCAPVCC, 0x3C)) {
-        Serial.println(F("Error en la inicializacion de la pantalla OLED"));
-    } else {
-        Serial.println("Pantalla OLED inicializada");
-        mostrarMensajeTemporal("Sistema iniciando", 1, 2000);
+    displayInicializada = inicializarOLED();
+    if (!displayInicializada) {
+        Serial.println("ADVERTENCIA: OLED no inicializada, continuando sin display...");
     }
 
-    // Inicializar servo
     servoMotor.attach(SERVO_PIN);
     moverServoSuave(90);
     Serial.println("Servo inicializado");
+    mostrarMensajeTemporal("Servo OK", 2, 1000);
 
-    // Inicializar cámara
+    mostrarMensajeTemporal("Iniciando camara", 2, 1000);
     if (!init_camera()) {
-        Serial.println("Fallo la inicializacion de la camara");
-        mostrarMensajeTemporal("Error Camara", 1, 3000);
+        Serial.println("Fallo inicializacion camara");
+        mostrarMensajeTemporal("Error Camara", 2, 3000);
     } else {
-        mostrarMensajeTemporal("Camara inicializada correctamente", 1, 3000);
+        Serial.println("Camara inicializada correctamente");
+        mostrarMensajeTemporal("Camara OK", 2, 2000);
     }
 
-    // Conexión a WiFi
     Serial.println("Conectando a WiFi...");
-    mostrarMensajeTemporal("Conectando WiFi", 1, 2000);
+    mostrarMensajeTemporal("Conectando\nWiFi", 2, 2000);
     WiFi.begin(ssid, password);
     
     int intentos = 0;
@@ -344,32 +390,30 @@ void setup() {
     
     if (WiFi.status() == WL_CONNECTED) {
         Serial.println("\nWiFi conectado");
-        Serial.print("IP address: ");
+        Serial.print("IP: ");
         Serial.println(WiFi.localIP());
-        mostrarMensajeTemporal("WiFi OK\nIP: " + WiFi.localIP().toString());
+        mostrarMensajeTemporal("WiFi OK\nIP: " + WiFi.localIP().toString(), 2, 3000);
     } else {
-        Serial.println("\nError de conexión WiFi!");
-        mostrarMensajeTemporal("Error WiFi", 1, 3000);
+        Serial.println("\nError WiFi!");
+        mostrarMensajeTemporal("Error\nWiFi", 1, 3000);
     }
+
     Serial.println("Sistema listo");
-    mostrarMensajeTemporal("Sistema listo", 1, 2000);
+    mostrarMensajeTemporal("Sistema\nlisto", 2, 2000);
 }
 
 // --- Bucle principal del programa ---
-
 void loop() {
-    // Variable estática para controlar el tiempo entre detecciones (debounce)
     static unsigned long ultima_deteccion = 0;
     unsigned long tiempo_actual = millis();
     
-    // Obtiene la distancia en centímetros
+    // Tu lógica principal de detección
     int distancia = sonar.ping_cm(); 
     
-    // Lógica de detección: si se detecta un objeto (distancia válida y dentro del rango),
-    // y ha pasado suficiente tiempo desde la última detección (3 segundos de debounce).
     if (distancia > 0 && distancia < MAX_DISTANCE && (tiempo_actual - ultima_deteccion) > 3000) {
-        mostrarMensajeTemporal("Objeto identificado", 2, 2000);
-        enviarDeteccionYClasificacion();
+        mostrarMensajeTemporal("Objeto\ndetectado", 2, 2000);
+        enviarDeteccionYClasificacion(); // Descomenta cuando funcione
     }
-    delay(50); // Pequeño delay para no saturar el loop
+    
+    delay(50);
 }
