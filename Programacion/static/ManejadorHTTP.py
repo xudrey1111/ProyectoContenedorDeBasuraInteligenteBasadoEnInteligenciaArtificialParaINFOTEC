@@ -49,6 +49,11 @@ class Manejador():
                         "message": "Confianza insuficiente, por favor reintente",
                         "confianza_actual": float(getProbabilidadClase)
                     }
+                    self.diccionarioIdentificacion = {
+                        'clase': "Objeto no identificado. Reintentar",
+                        'probabilidad': 0.0,
+                        'imagen_path': 'Imagenes/NoConfianza.jpg'
+                    }
                     return jsonify(response_data), 200
                 else:
                     if imagen_path:

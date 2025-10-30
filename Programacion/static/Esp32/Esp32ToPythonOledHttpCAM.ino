@@ -308,18 +308,19 @@ void enviarImagenComoBytes() {
                         procesarComando(clasificacion[0]);
                     } else {
                         Serial.println("Comando de clasificacion invalido.");
+                        procesarComando("Comando de\nclasificacion\ninvalido.",1, 3000);
                     }
                 } else {
                     Serial.println("Error en la respuesta del servidor.");
-                    mostrarMensajeTemporal("Error servidor", 1, 3000);
+                    mostrarMensajeTemporal("Error respuesta del servidor", 1, 3000);
                 }
             } else {
                 Serial.println("Error parseando respuesta JSON");
-                mostrarMensajeTemporal("Error JSON", 1, 3000);
+                mostrarMensajeTemporal("Error parseando JSON", 1, 3000);
             }
         } else {
             Serial.printf("Error enviando imagen: %s\n", http.errorToString(httpResponseCode).c_str());
-            mostrarMensajeTemporal("Error envio", 1, 3000);
+            mostrarMensajeTemporal("Error envio imagen", 1, 3000);
         }
         esp_camera_fb_return(fb);
         http.end();
