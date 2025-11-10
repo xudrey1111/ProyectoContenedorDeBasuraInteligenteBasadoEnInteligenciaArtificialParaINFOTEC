@@ -6,6 +6,11 @@ from static.pruebaModelos import *
 import socket
 
 class Manejador():
+    """
+        Inicializa el manejador con el modelo de IA y configura las rutas
+        Args:
+            modelo (str): Ruta al modelo de IA entrenado
+    """
     def __init__(self, modelo):
         self.data=None
         self.imagen=None
@@ -15,6 +20,11 @@ class Manejador():
         self.bravo=pruebaModeloIA(modelo)
         self.imagenes_dir = os.path.join('Programacion','static', 'imagenes')
 
+    """
+        Recibe y valida un mensaje JSON desde una solicitud HTTP
+        Returns:
+            tuple: (JSON data, status code) o (error response, 400) si no es JSON válido
+    """
     def recepcionMensaje(self):
         if not request.is_json:
             print("Servidor: Error - La solicitud no contiene formato JSON.")
@@ -23,6 +33,11 @@ class Manejador():
         self.data = request.get_json()
         return self.data
     
+    """
+        Procesa el mensaje recibido según el tipo de evento y ejecuta la lógica correspondiente
+        Returns:
+            tuple: (JSON response, status code) con los resultados del procesamiento
+    """
     def enviarMensaje(self):
         evento = self.data.get("evento")
         if evento == "objeto identificado":
@@ -74,6 +89,11 @@ class Manejador():
         else:
             return jsonify({"status": "error", "message": "Evento no reconocido"}), 400
 
+    """
+        Obtiene la dirección IP del servidor
+        Returns:
+            str: Dirección IP del servidor o "0.0.0.0" si hay error
+    """
     def getIpServidor(self):
         try:
             s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
@@ -83,7 +103,14 @@ class Manejador():
             return ip
         except Exception:
             return "0.0.0.0"
-        
+
+    """
+        Guarda los bytes de la imagen en el sistema de archivos con nombre único
+        Args:
+            imagen_bytes (bytes): Bytes de la imagen a guardar
+        Returns:
+            str or None: Ruta del archivo guardado o None si hay error
+    """
     def guardarImagen(self, imagen_bytes):
         try:
             if not os.path.exists(self.imagenes_dir):
