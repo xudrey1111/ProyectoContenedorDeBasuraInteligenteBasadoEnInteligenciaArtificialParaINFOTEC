@@ -308,7 +308,7 @@ void enviarImagenComoBytes() {
                         procesarComando(clasificacion[0]);
                     } else {
                         Serial.println("Comando de clasificacion invalido.");
-                        procesarComando("Comando de\nclasificacion\ninvalido.",1, 3000);
+                        mostrarMensajeTemporal("Comando de\nclasificacion\ninvalido.",1, 3000);
                     }
                 } else {
                     Serial.println("Error en la respuesta del servidor.");
@@ -348,7 +348,7 @@ void setup() {
     }
 
     servoMotor.attach(SERVO_PIN);
-    moverServoSuave(90);
+    servoMotor.write(90); 
     Serial.println("Servo inicializado");
     mostrarMensajeTemporal("Servo OK", 2, 1000);
 

@@ -22,6 +22,6 @@ def clasificar_objeto():
 
 if __name__ == '__main__':
     try:
-        app.run(host=alpha.getIpServidor(), port=5000, debug=True)
+        app.run(host=alpha.getIpServidor(), port=5000, debug=False)
     except Exception as e:
         print(f"Error al iniciar el servidor: {e}")

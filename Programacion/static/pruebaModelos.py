@@ -6,16 +6,37 @@ import matplotlib.pyplot as plt
 import os
 
 class pruebaModeloIA:
+    """
+        Inicializa la clase con la ruta del modelo y define las clases de clasificación
+        Args:
+            modelo (str): Ruta al archivo del modelo entrenado
+    """
     def __init__(self, modelo):
         self.modelo = self.loadModel(modelo)
         self.clases = {0: 'Biodegradable', 1: 'No biodegradable'}
 
+    """
+        Carga el modelo de TensorFlow desde la ruta especificada
+        Args:
+            ruta_modelo (str): Ruta al archivo del modelo
+        Returns:
+            model: Modelo de TensorFlow cargado
+        Raises:
+            FileNotFoundError: Si el archivo del modelo no existe
+    """
     def loadModel(self, ruta_modelo):
         if not os.path.exists(ruta_modelo):
             raise FileNotFoundError(f"No se encontró el archivo del modelo en {ruta_modelo}")
         modelo = load_model(ruta_modelo)
         return modelo
 
+    """
+        Preprocesa una imagen para que sea compatible con el modelo
+        Args:
+            imagen (str): Ruta a la imagen a procesar
+        Returns:
+            numpy.ndarray: Array de la imagen preprocesada con shape (1, 224, 224, 3)
+    """
     def processImage(self,imagen):
         img = image.load_img(imagen, target_size=(224, 224))
         img_array = image.img_to_array(img)
@@ -23,6 +44,13 @@ class pruebaModeloIA:
         img_array = np.expand_dims(img_array, axis=0)
         return img_array
 
+    """
+        Realiza la predicción sobre la imagen preprocesada
+        Args:
+            img_array (numpy.ndarray): Array de la imagen preprocesada
+        Returns:
+            dict: Diccionario con la clase predicha y su probabilidad
+    """
     def predictImage(self, img_array):
         predicciones = self.modelo.predict(img_array)
         clase_predicha = np.argmax(predicciones[0])
@@ -33,20 +61,31 @@ class pruebaModeloIA:
             'probabilidad': float(probabilidad)
         }
 
+    """
+        Muestra la imagen con la predicción usando matplotlib
+        Args:
+            imagen (str): Ruta a la imagen original
+            prediccion (dict): Diccionario con los resultados de la predicción
+        Returns:
+            None: Muestra la imagen con la predicción
+    """
     def showResults(self, imagen, prediccion):
         img = image.load_img(imagen)
         plt.figure(figsize=(8, 6))
         plt.imshow(img)
         plt.title(f"Predicción: {prediccion['clase']} ({prediccion['probabilidad']*100:.2f}%)")
         plt.axis('off')
-        print("\nProbabilidades por clase:")
-        for idx, prob in enumerate(prediccion['todas_las_probabilidades']):
-            print(f"{self.clases[idx]}: {prob*100:.2f}%")
         plt.show()
 
-    def run(self):
+    """
+        Ejecuta el pipeline completo: procesar imagen, predecir y mostrar resultados
+        Args:
+            imagen (str): Ruta a la imagen a clasificar
+        Returns:
+            None: Ejecuta todo el proceso de clasificación
+    """
+    def run(self,imagen):
         try:
-            imagen="C:\\Users\\XxGho\\OneDrive\\Documentos\\Escuela\\Proceso Dual\\Proyecto\\2° Proyecto\\Dataset personalizado\\test\\N\\nobiodegradable0012.jpg"
             img_array = self.processImage(imagen)
             prediccion = self.predictImage(img_array)
             self.showResults(imagen,prediccion)
