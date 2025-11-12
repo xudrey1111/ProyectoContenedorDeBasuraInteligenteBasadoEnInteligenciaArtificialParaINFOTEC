@@ -77,8 +77,9 @@ bool displayInicializada = false;
 
 // --- Funciones del sistema ---
 
+
 /**
- * @brief Inicializa la cámara.
+ * @brief Inicializa la cámara con mejores ajustes de saturación y brillo.
  */
 bool init_camera() {
     camera_config_t config;
@@ -116,6 +117,19 @@ bool init_camera() {
     int err = esp_camera_init(&config);
     if (err != ESP_OK) {
         Serial.printf("Es distinto a ok");
+        return false;
+    }
+    sensor_t *s = esp_camera_sensor_get();
+    if (s != NULL) {
+        // Ajustar saturación (rango: -2 to 2)
+        s->set_saturation(s, 0);  // Aumentar saturación
+        // Ajustar brillo (rango: -2 to 2)
+        s->set_brightness(s, -2);  // Aumentar brillo
+        // Ajustar contraste (rango: -2 to 2)
+        s->set_contrast(s, 1);    // Aumentar contraste
+        s->set_gainceiling(s, GAINCEILING_8X);
+    } else {
+        Serial.println("Error: No se pudo obtener el sensor para ajustes");
         return false;
     }
     return true;

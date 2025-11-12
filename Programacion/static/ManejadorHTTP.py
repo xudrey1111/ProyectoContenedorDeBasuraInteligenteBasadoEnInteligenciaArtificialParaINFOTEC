@@ -75,7 +75,10 @@ class Manejador():
                         nombre_archivo = os.path.basename(imagen_path)
                         ruta_web = f"imagenes/{nombre_archivo}" 
                         self.diccionarioIdentificacion['imagen_path'] = ruta_web
-                    clasificacion = "N" if getNombreClase == "No Biodegradable" else "B"
+                        if getNombreClase == "No biodegradable":
+                            clasificacion = "N"
+                        else:
+                            clasificacion = "B"
                     response_data = {
                         "status": "ok", 
                         "clasificacion": clasificacion,
