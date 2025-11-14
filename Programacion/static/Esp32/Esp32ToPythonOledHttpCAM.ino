@@ -25,7 +25,7 @@
 #define TRIG_PIN 1              
 #define ECHO_PIN 2             
 #define SERVO_PIN 3           
-#define MAX_DISTANCE 10       
+#define MAX_DISTANCE 5       
 
 // --- Configuración de pines de la cámara ESP32-S3 CAM ---
 #define CAM_PIN_D0      11
@@ -127,6 +127,7 @@ bool init_camera() {
         s->set_brightness(s, -2);  // Aumentar brillo
         // Ajustar contraste (rango: -2 to 2)
         s->set_contrast(s, 1);    // Aumentar contraste
+        //configura el valor máximo que puede alcanzar la ganancia automática del sensor
         s->set_gainceiling(s, GAINCEILING_8X);
     } else {
         Serial.println("Error: No se pudo obtener el sensor para ajustes");

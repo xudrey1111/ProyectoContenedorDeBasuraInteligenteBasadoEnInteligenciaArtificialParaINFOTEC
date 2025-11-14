@@ -1,8 +1,8 @@
 from datetime import datetime
-from io import BytesIO
 import uuid
 from flask import Flask, request, jsonify
-from static.pruebaModelos import *
+#from static.pruebaModelosTF import *
+from static.PruebaModelosYOLO import *
 import socket
 
 class Manejador():
@@ -16,7 +16,7 @@ class Manejador():
         self.imagen=None
         self.diccionarioIdentificacion=None
         self.ultimaImagenCapturada = None
-
+        self.no_biodegradables = ["No biodegradable", "plastico", "metal", "vidrio"]
         self.bravo=pruebaModeloIA(modelo)
         self.imagenes_dir = os.path.join('Programacion','static', 'imagenes')
 
@@ -50,14 +50,13 @@ class Manejador():
             try:
                 imagen_bytes = bytes(imagen_bytes_array)
                 print(f"Servidor: Imagen recibida como bytes - tamaño: {len(imagen_bytes)} bytes")
-                imagen_path = self.guardarImagen(imagen_bytes)
-                self.ultimaImagenCapturada = imagen_path
-                self.imagen = BytesIO(imagen_bytes)
+                self.imagen = self.guardarImagen(imagen_bytes)
+                self.ultimaImagenCapturada = self.imagen
                 procesarImagen = self.bravo.processImage(self.imagen)
                 self.diccionarioIdentificacion = self.bravo.predictImage(procesarImagen)
                 getProbabilidadClase = self.diccionarioIdentificacion.get('probabilidad', 0)
                 getNombreClase = self.diccionarioIdentificacion.get('clase', '')
-                if getProbabilidadClase <= 0.7:
+                if getProbabilidadClase <= 0.65:
                     print(f"Servidor: Confianza insuficiente ({getProbabilidadClase*100:.2f}%), solicitando reintento")
                     response_data = {
                         "status": "reintentar", 
@@ -71,11 +70,11 @@ class Manejador():
                     }
                     return jsonify(response_data), 200
                 else:
-                    if imagen_path:
-                        nombre_archivo = os.path.basename(imagen_path)
+                    if self.imagen:
+                        nombre_archivo = os.path.basename(self.imagen)
                         ruta_web = f"imagenes/{nombre_archivo}" 
                         self.diccionarioIdentificacion['imagen_path'] = ruta_web
-                        if getNombreClase == "No biodegradable":
+                        if getNombreClase in self.no_biodegradables:
                             clasificacion = "N"
                         else:
                             clasificacion = "B"
