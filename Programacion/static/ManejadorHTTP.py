@@ -1,8 +1,8 @@
 from datetime import datetime
 import uuid
 from flask import Flask, request, jsonify
-#from static.pruebaModelosTF import *
-from static.PruebaModelosYOLO import *
+from static.pruebaModelosTF import *
+#from static.PruebaModelosYOLO import *
 import socket
 
 class Manejador():
@@ -87,6 +87,11 @@ class Manejador():
                     return jsonify(response_data), 200
             except Exception as e:
                 print(f"Servidor: Error al procesar la imagen: {str(e)}")
+                self.diccionarioIdentificacion = {
+                    'clase': 'Esperando detección...',
+                    'probabilidad': 0.0,
+                    'imagen_path': 'Imagenes/placeholder.jpg'
+                }
                 return jsonify({"status": "error", "message": f"Error al procesar la imagen: {str(e)}"}), 500
         else:
             return jsonify({"status": "error", "message": "Evento no reconocido"}), 400
