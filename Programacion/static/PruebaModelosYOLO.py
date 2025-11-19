@@ -57,7 +57,7 @@ class pruebaModeloIA:
 
 if __name__ == "__main__":
     model_path = "C:\\Users\\XxGho\\OneDrive\\Documentos\\Escuela\\Proceso Dual\\Proyecto\\3° Proyecto\\Programacion\\static\\Modelos\\Identificacion de objetos\\yoloooo.pt"
-    img_path = "C:\\Users\\XxGho\\OneDrive\\Documentos\\Escuela\\Proceso Dual\\Proyecto\\2° Proyecto\\Dataset uso libre\\realwaste-main\\RealWaste\\Food Organics\\Food Organics_21.jpg"
+    img_path = "C:\\Users\\XxGho\\OneDrive\\Documentos\\Escuela\\Proceso Dual\\Proyecto\\3° Proyecto\\Programacion\\static\\imagenes\\waste_20251116_195935_d98ac025.jpg"
     
     alpha = pruebaModeloIA(model_path)
     resultados = alpha.run(img_path)

@@ -140,29 +140,44 @@ bool init_camera() {
  * @brief Inicializa de forma robusta la pantalla oled, necesario
  */
 bool inicializarOLED() {
+    Serial.println("Inicializando OLED...");
+    // Detener I2C si ya estaba inicializado
     Wire.end();
-    Wire.begin(I2C_SDA_PIN, I2C_SCL_PIN);
-    delay(300);
-    
-    for (uint8_t addr : {0x3C, 0x3D}) {
-        if (display.begin(SSD1306_SWITCHCAPVCC, addr)) {
-            Serial.printf("OLED encontrado en 0x%02X\n", addr);
-            
-            display.clearDisplay();
-            display.setTextSize(2);
-            display.setTextColor(SSD1306_WHITE);
-            display.setCursor(0, 0);
-            display.println("OLED OK");
-            display.display();
-            delay(1000);
-            
-            return true;
-        }
-        delay(100);
+    delay(100);
+    // Inicializar I2C con los pines específicos
+    bool i2cIniciado = Wire.begin(I2C_SDA_PIN, I2C_SCL_PIN);
+    if (!i2cIniciado) {
+        Serial.println("Error: No se pudo iniciar I2C");
+        return false;
     }
-    
-    Serial.println("Error: OLED no encontrado");
-    return false;
+    // Esperar a que el bus I2C esté estable
+    delay(200);
+    // Intentar inicializar display con ambas direcciones
+    bool displayInicializado = false;
+    if(display.begin(SSD1306_SWITCHCAPVCC, 0x3C)) {
+        Serial.println("OLED encontrado en 0x3C");
+        displayInicializado = true;
+    } else {
+        Serial.println("Falló 0x3C, intentando 0x3D...");
+        delay(100);
+        if(display.begin(SSD1306_SWITCHCAPVCC, 0x3D)) {
+            Serial.println("OLED encontrado en 0x3D");
+            displayInicializado = true;
+        }
+    }
+    if (displayInicializado) {
+        display.clearDisplay();
+        display.setTextSize(2);
+        display.setTextColor(SSD1306_WHITE);
+        display.setCursor(0, 0);
+        display.println("OLED OK");
+        display.display();
+        delay(1000);
+        return true;
+    } else {
+        Serial.println("Error: No se pudo inicializar OLED en ninguna direccion");
+        return false;
+    }
 }
 
 /**

@@ -56,7 +56,7 @@ class Manejador():
                 self.diccionarioIdentificacion = self.bravo.predictImage(procesarImagen)
                 getProbabilidadClase = self.diccionarioIdentificacion.get('probabilidad', 0)
                 getNombreClase = self.diccionarioIdentificacion.get('clase', '')
-                if getProbabilidadClase <= 0.65:
+                if getProbabilidadClase <= 0.60:
                     print(f"Servidor: Confianza insuficiente ({getProbabilidadClase*100:.2f}%), solicitando reintento")
                     response_data = {
                         "status": "reintentar", 
