@@ -39,6 +39,11 @@ def clasificar_objeto():
     ultima_actualizacion = time.time()
     return respuesta
 
+"""
+    Endpoint para recibir y procesar solicitudes de clasificación de objetos
+    Returns:
+        tuple: Respuesta JSON con el resultado de la clasificación y código de estado
+"""
 @app.route('/verificar_actualizacion', methods=['GET'])
 def verificar_actualizacion():
     global ultima_actualizacion
