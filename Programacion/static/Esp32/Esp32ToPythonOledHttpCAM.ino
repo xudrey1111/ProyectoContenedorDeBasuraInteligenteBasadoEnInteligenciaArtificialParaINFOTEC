@@ -25,7 +25,7 @@
 #define TRIG_PIN 1              
 #define ECHO_PIN 2             
 #define SERVO_PIN 3           
-#define MAX_DISTANCE 5       
+#define MAX_DISTANCE 10       
 
 // --- Configuración de pines de la cámara ESP32-S3 CAM ---
 #define CAM_PIN_D0      11
@@ -109,10 +109,10 @@ bool init_camera() {
     config.xclk_freq_hz = 20000000;
     config.frame_size = FRAMESIZE_240X240; 
     config.pixel_format = PIXFORMAT_JPEG;
-    config.grab_mode = CAMERA_GRAB_WHEN_EMPTY;
+    config.grab_mode = CAMERA_GRAB_LATEST;
     config.fb_location = CAMERA_FB_IN_DRAM;
     config.jpeg_quality = 10; 
-    config.fb_count = 1;
+    config.fb_count = 2;
     
     int err = esp_camera_init(&config);
     if (err != ESP_OK) {
@@ -265,13 +265,13 @@ void enviarNotificacionDeteccion() {
         
         String jsonPayload;
         serializeJson(doc, jsonPayload);
-    
-        Serial.println("Enviando notificación de detección...");
+
         int httpResponseCode = http.POST(jsonPayload);
         if (httpResponseCode > 0) {
             Serial.printf("Notificación enviada. Código HTTP: %d\n", httpResponseCode);
         } else {
             Serial.printf("Error en notificación: %s\n", http.errorToString(httpResponseCode).c_str());
+            mostrarMensajeTemporal("Error en notificación", 1, 3000);
         }
         http.end();
 }
@@ -281,6 +281,7 @@ void enviarNotificacionDeteccion() {
  */
 void enviarImagenComoBytes() {
         camera_fb_t *fb = esp_camera_fb_get();
+        delay(500);
         if (!fb) {
             Serial.println("Fallo la captura de la cámara");
             return;

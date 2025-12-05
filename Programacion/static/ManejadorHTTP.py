@@ -48,43 +48,7 @@ class Manejador():
             if not imagen_bytes_array:
                 return jsonify({"status": "error", "message": "Falta el array de bytes de la imagen"}), 400
             try:
-                imagen_bytes = bytes(imagen_bytes_array)
-                print(f"Servidor: Imagen recibida como bytes - tamaño: {len(imagen_bytes)} bytes")
-                self.imagen = self.guardarImagen(imagen_bytes)
-                self.ultimaImagenCapturada = self.imagen
-                procesarImagen = self.bravo.processImage(self.imagen)
-                self.diccionarioIdentificacion = self.bravo.predictImage(procesarImagen)
-                getProbabilidadClase = self.diccionarioIdentificacion.get('probabilidad', 0)
-                getNombreClase = self.diccionarioIdentificacion.get('clase', '')
-                if getProbabilidadClase <= 0.60:
-                    print(f"Servidor: Confianza insuficiente ({getProbabilidadClase*100:.2f}%), solicitando reintento")
-                    response_data = {
-                        "status": "reintentar", 
-                        "message": "Confianza insuficiente, por favor reintente",
-                        "confianza_actual": float(getProbabilidadClase)
-                    }
-                    self.diccionarioIdentificacion = {
-                        'clase': "Objeto no identificado. Reintentar",
-                        'probabilidad': 0.0,
-                        'imagen_path': 'Imagenes/NoConfianza.jpg'
-                    }
-                    return jsonify(response_data), 200
-                else:
-                    if self.imagen:
-                        nombre_archivo = os.path.basename(self.imagen)
-                        ruta_web = f"imagenes/{nombre_archivo}" 
-                        self.diccionarioIdentificacion['imagen_path'] = ruta_web
-                        if getNombreClase in self.no_biodegradables:
-                            clasificacion = "N"
-                        else:
-                            clasificacion = "B"
-                    response_data = {
-                        "status": "ok", 
-                        "clasificacion": clasificacion,
-                        "clase_detectada": getNombreClase,
-                        "confianza": float(getProbabilidadClase)
-                    }
-                    return jsonify(response_data), 200
+                return self.logicaRecepcionImagen(imagen_bytes_array)
             except Exception as e:
                 print(f"Servidor: Error al procesar la imagen: {str(e)}")
                 self.diccionarioIdentificacion = {
@@ -95,6 +59,45 @@ class Manejador():
                 return jsonify({"status": "error", "message": f"Error al procesar la imagen: {str(e)}"}), 500
         else:
             return jsonify({"status": "error", "message": "Evento no reconocido"}), 400
+
+
+    def logicaRecepcionImagen(self,imagen_bytes_array):
+            imagen_bytes = bytes(imagen_bytes_array)
+            print(f"Servidor: Imagen recibida como bytes - tamaño: {len(imagen_bytes)} bytes")
+            self.imagen = self.guardarImagen(imagen_bytes)
+            self.ultimaImagenCapturada = self.imagen
+
+            procesarImagen = self.bravo.processImage(self.imagen)
+            nombre_archivo = os.path.basename(self.imagen)
+            ruta_web = f"imagenes/{nombre_archivo}" 
+
+            self.diccionarioIdentificacion = self.bravo.predictImage(procesarImagen)
+            getProbabilidadClase = self.diccionarioIdentificacion.get('probabilidad', 0)
+            getNombreClase = self.diccionarioIdentificacion.get('clase', '')
+
+            if getProbabilidadClase <= 0.60:
+                print(f"Servidor: Confianza insuficiente ({getProbabilidadClase*100:.2f}%), solicitando reintento")
+                response_data = {
+                    "status": "reintentar", 
+                    "message": "Confianza insuficiente, por favor reintente",
+                    "confianza_actual": float(getProbabilidadClase)
+                }
+                self.diccionarioIdentificacion = {
+                    'clase': "Objeto no identificado. Reintentar",
+                    'probabilidad': float(getProbabilidadClase),
+                }
+                self.diccionarioIdentificacion['imagen_path'] = ruta_web
+                return jsonify(response_data), 200
+            else:
+                self.diccionarioIdentificacion['imagen_path'] = ruta_web
+                clasificacion = "N" if getNombreClase in self.no_biodegradables else "B"
+                response_data = {
+                    "status": "ok", 
+                    "clasificacion": clasificacion,
+                    "clase_detectada": getNombreClase,
+                    "confianza": float(getProbabilidadClase)
+                }
+                return jsonify(response_data), 200
 
     """
         Obtiene la dirección IP del servidor

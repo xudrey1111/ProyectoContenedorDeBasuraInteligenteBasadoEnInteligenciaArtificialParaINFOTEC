@@ -4,7 +4,7 @@ from flask import Flask, jsonify, render_template, request
 
 app = Flask(__name__)
 # Inicializa el manejador con la ruta del modelo de IA entrenado
-alpha = Manejador(modelo="C:\\Users\\XxGho\\OneDrive\\Documentos\\Escuela\\Proceso Dual\\Proyecto\\3° Proyecto\\Programacion\\static\\Modelos\\Identificacion de images\\model_retrained_REALDATA.h5")
+alpha = Manejador(modelo="C:\\Users\\XxGho\\OneDrive\\Documentos\\Escuela\\Proceso Dual\\Proyecto\\3° Proyecto\\Programacion\\static\\Modelos\\Identificacion de images\\model_retrained_REALDATA_v2.h5")
 #alpha=Manejador(modelo="C:\\Users\\XxGho\\OneDrive\\Documentos\\Escuela\\Proceso Dual\\Proyecto\\3° Proyecto\\Programacion\\static\\Modelos\\Identificacion de objetos\\yoloooo.pt")
 
 ultima_actualizacion = 0
@@ -72,8 +72,6 @@ def verificar_actualizacion():
 """
 if __name__ == '__main__':
     try:
-        # Inicia el servidor con la IP obtenida dinámicamente en el puerto 5000
-        # En tu bloque if __name__ == '__main__':
         app.run(host=alpha.getIpServidor(), port=5000, debug=False, threaded=True)
     except Exception as e:
         print(f"Error al iniciar el servidor: {e}")
