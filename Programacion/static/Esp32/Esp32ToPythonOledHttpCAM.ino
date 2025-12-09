@@ -228,7 +228,7 @@ void moverServoSuave(int anguloObjetivo) {
 void moverYVolverSuave(int anguloObjetivo) {
     moverServoSuave(anguloObjetivo);
     delay(500);         
-    moverServoSuave(90);   
+    moverServoSuave(100);   
 }
 
 /**
@@ -379,7 +379,7 @@ void setup() {
     }
 
     servoMotor.attach(SERVO_PIN);
-    servoMotor.write(90); 
+    servoMotor.write(100); 
     Serial.println("Servo inicializado");
     mostrarMensajeTemporal("Servo OK", 2, 1000);
 
