@@ -1,14 +1,16 @@
 import time
-from static.ManejadorHTTP import Manejador 
-from flask import Flask, jsonify, render_template, request
+from static.ManejadorHTTP import Manejador
+from static.HistorialResultados import estadisticasIdentificaciones
+from flask import Flask, jsonify, redirect, render_template, request
+
 
 app = Flask(__name__)
 # Inicializa el manejador con la ruta del modelo de IA entrenado
 alpha = Manejador(modelo="C:\\Users\\XxGho\\OneDrive\\Documentos\\Escuela\\Proceso Dual\\Proyecto\\3° Proyecto\\Programacion\\static\\Modelos\\Identificacion de images\\model_retrained_REALDATA_v2.h5")
+charlie= estadisticasIdentificaciones()
 #alpha=Manejador(modelo="C:\\Users\\XxGho\\OneDrive\\Documentos\\Escuela\\Proceso Dual\\Proyecto\\3° Proyecto\\Programacion\\static\\Modelos\\Identificacion de objetos\\yoloooo.pt")
 
-ultima_actualizacion = 0
-
+ultimaActualizacion = 0
 
 """
     Ruta principal que muestra la página web con los resultados de clasificación
@@ -26,6 +28,11 @@ def index():
         return render_template('index.html', resultado=resultado_default)
     return render_template('index.html', resultado=alpha.diccionarioIdentificacion)
 
+@app.route('/', methods=['GET'])
+def redirigir_a_index():
+    return redirect('/index')
+
+
 """
     Endpoint para recibir y procesar solicitudes de clasificación de objetos
     Returns:
@@ -33,10 +40,12 @@ def index():
 """
 @app.route('/', methods=['POST'])
 def clasificar_objeto():
-    global ultima_actualizacion
+    global ultimaActualizacion
     alpha.recepcionMensaje()
     respuesta = alpha.enviarMensaje()
-    ultima_actualizacion = time.time()
+    if alpha.data.get("evento") == "imagen bytes":
+            charlie.setDiccionarioPrincipal(alpha.diccionarioIdentificacion)
+    ultimaActualizacion = time.time()
     return respuesta
 
 """
@@ -46,26 +55,47 @@ def clasificar_objeto():
 """
 @app.route('/verificar_actualizacion', methods=['GET'])
 def verificar_actualizacion():
-    global ultima_actualizacion
+    global ultimaActualizacion
     timestamp_cliente = float(request.args.get('timestamp', 0))
-    timeout = 30  # Segundos máximos de espera antes de cerrar conexión para evitar timeout del navegador
+    timeout = 30
     inicio = time.time()
     while True:
-        if ultima_actualizacion > timestamp_cliente:
+        if ultimaActualizacion > timestamp_cliente:
             if (alpha.diccionarioIdentificacion and 
                 alpha.diccionarioIdentificacion.get('clase') != 'Esperando detección...'):
                 
                 return jsonify({
                     'actualizado': True,
-                    'timestamp': ultima_actualizacion,
+                    'timestamp': ultimaActualizacion,
                     'datos': alpha.diccionarioIdentificacion
                 })
         if (time.time() - inicio) > timeout:
             return jsonify({
                 'actualizado': False,
-                'timestamp': ultima_actualizacion
+                'timestamp': ultimaActualizacion
             })
         time.sleep(0.5)
+
+
+"""
+    Ruta para obtener el historial completo de identificaciones
+    Returns:
+        JSON: Diccionario con todas las identificaciones y contador
+"""
+@app.route('/historial', methods=['GET'])
+def obtener_historial():
+    return charlie.getHistorial()
+
+
+"""
+    Ruta para obtener estadísticas básicas de las identificaciones
+    Returns:
+        JSON: Estadísticas del historial
+"""
+@app.route('/estadisticas', methods=['GET'])
+def obtener_estadisticas():
+    return charlie.getEstadisticas()
+
 
 """
     Punto de entrada principal que inicia el servidor Flask
