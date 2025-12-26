@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Estado del Contenedor</title>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/index.css') }}">
+</head>
+<body>
+    <div class="container">
+        <h1>Monitor de Contenedor Inteligente</h1>
+        <h2>Última Imagen Capturada</h2>
+        <div class="imagen-container">
+            <img id="imagen-clasificada" src="/static/Imagenes/placeholder.jpg" alt="Imagen del contenedor" />
+        </div>
+        <h2>Resumen de Residuos</h2>
+        <div class="result-box">
+            <p><strong>Residuos Orgánicos:</strong> <span id="residuos-organicos">0</span></p>
+            <p><strong>Residuos Inorgánicos:</strong> <span id="residuos-inorganicos">0</span></p>
+            <p><strong>Estado del Contenedor:</strong> <span id="estado-contenedor" class=""></span></p>
+        </div>
+    </div>
+    <script>
+        $(document).ready(function() {
+            let ultimoTimestamp = 0;
+
+            function actualizarInterfaz(datos) {
+                if (datos.imagen_path) {
+                    $('#imagen-clasificada').attr('src', '/static/' + datos.imagen_path);
+                }
+
+                $('#residuos-organicos').text(datos.organicos || 0);
+                $('#residuos-inorganicos').text(datos.inorganicos || 0);
+
+                const totalResiduos = (datos.organicos || 0) + (datos.inorganicos || 0);
+                const estadoContenedor = $('#estado-contenedor');
+
+                if (totalResiduos >= 20) {
+                    estadoContenedor.text('Lleno').addClass('no-biodegradable');
+                } else {
+                    estadoContenedor.text('Disponible').addClass('biodegradable');
+                }
+            }
+
+            function buscarActualizaciones() {
+                $.ajax({
+                    url: '/verificar_actualizacion',
+                    type: 'GET',
+                    data: { timestamp: ultimoTimestamp },
+                    success: function(response) {
+                        if (response.actualizado) {
+                            ultimoTimestamp = response.timestamp;
+                            actualizarInterfaz(response.datos);
+                        }
+                        buscarActualizaciones();
+                    },
+                    error: function(error) {
+                        console.error(error);
+                        setTimeout(buscarActualizaciones, 5000);
+                    }
+                });
+            }
+
+            buscarActualizaciones();
+        });
+    </script>
+</body>
+</html>
