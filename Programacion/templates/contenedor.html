@@ -3,66 +3,212 @@
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Estado del Contenedor</title>
-    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/index.css') }}">
+    <title>Monitor de Contenedor Inteligente</title>
+    <style>
+        body {
+            font-family: 'Arial', sans-serif;
+            background-color: #f0f4f7;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+        }
+
+        .container {
+            background-color: #fff;
+            border-radius: 15px;
+            box-shadow: 0 10px 20px rgba(0, 128, 0, 0.5); /* Luz verde debajo */
+            padding: 20px 30px;
+            width: 90%;
+            max-width: 700px;
+            text-align: center;
+        }
+
+        h1, h2 {
+            color: #019267;
+            margin: 0;
+        }
+
+        h1 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+        }
+
+        h2 {
+            font-size: 1.5rem;
+            margin-top: 20px;
+        }
+
+        .contenedor-basura {
+            display: flex;
+            justify-content: space-around;
+            margin-top: 30px;
+        }
+
+        .tipo-basura {
+            text-align: center;
+            width: 150px;
+        }
+
+        .barra {
+            height: 200px; /* Más alto */
+            width: 70px; /* Más grueso */
+            border-radius: 35px;
+            border: 3px solid #ccc;
+            background-color: #e6e6e6;
+            position: relative;
+            overflow: hidden;
+            box-shadow: 0 8px 16px rgba(0, 128, 0, 0.5); /* Luz verde */
+        }
+
+        .barra .relleno {
+            position: absolute;
+            bottom: 0;
+            height: 0;
+            width: 100%;
+            transition: height 0.3s ease;
+        }
+
+        .relleno.organico {
+            background-color: #b3b3b3; /* Gris */
+        }
+
+        .relleno.inorganico {
+            background-color: #019267; /* Verde */
+        }
+
+        li {
+            border: 1px solid #ccc;
+            background-color: #fff;
+            margin: 10px 0;
+            padding: 10px;
+            border-radius: 8px;
+            font-size: 1rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .button {
+            margin-top: 10px;
+            text-decoration: none;
+            display: inline-block;
+            padding: 10px 20px;
+            background-color: #4CAF50;
+            color: white;
+            border-radius: 5px;
+            text-align: center;
+            font-size: 1rem;
+        }
+
+        .button.organico {
+            background-color: #b3b3b3;
+        }
+
+        .button.inorganico {
+            background-color: #019267;
+        }
+
+        .clean-button {
+            padding: 5px 15px;
+            background-color: #d9534f;
+            color: white;
+            border-radius: 5px;
+            text-align: center;
+            font-size: 0.9rem;
+            font-weight: bold;
+            cursor: pointer;
+            border: none;
+        }
+
+        .clean-button:hover {
+            opacity: 0.8;
+        }
+    </style>
 </head>
 <body>
     <div class="container">
-        <h1>Monitor de Contenedor Inteligente</h1>
-        <h2>Última Imagen Capturada</h2>
-        <div class="imagen-container">
-            <img id="imagen-clasificada" src="/static/Imagenes/placeholder.jpg" alt="Imagen del contenedor" />
+        <!-- Vista principal -->
+        <div class="vista-monitor">
+            <h1>Monitor de Contenedor Inteligente</h1>
+            <h2>Resumen de Residuos</h2>
+            <div class="contenedor-basura">
+                <div class="tipo-basura">
+                    <div class="barra">
+                        <div class="relleno organico" id="barra-organico"></div>
+                    </div>
+                    <p>Orgánico</p>
+                    <button class="button organico" onclick="verDetalle('organico')">Ver Orgánico</button>
+                    <p><span id="residuos-organicos">0</span>/20</p>
+                </div>
+                <div class="tipo-basura">
+                    <div class="barra">
+                        <div class="relleno inorganico" id="barra-inorganico"></div>
+                    </div>
+                    <p>Inorgánico</p>
+                    <button class="button inorganico" onclick="verDetalle('inorganico')">Ver Inorgánico</button>
+                    <p><span id="residuos-inorganicos">0</span>/20</p>
+                </div>
+            </div>
         </div>
-        <h2>Resumen de Residuos</h2>
-        <div class="result-box">
-            <p><strong>Residuos Orgánicos:</strong> <span id="residuos-organicos">0</span></p>
-            <p><strong>Residuos Inorgánicos:</strong> <span id="residuos-inorganicos">0</span></p>
-            <p><strong>Estado del Contenedor:</strong> <span id="estado-contenedor" class=""></span></p>
+        <!-- Vista de detalles -->
+        <div class="detalle-residuos" id="detalle-residuos" style="display: none;">
+            <h2 id="titulo-detalle">Detalles de Residuos</h2>
+            <ul id="lista-residuos"></ul>
+            <button class="button" onclick="volver()">Volver</button>
         </div>
     </div>
     <script>
-        $(document).ready(function() {
-            let ultimoTimestamp = 0;
+        const residuos = {
+            organico: [
+                { id: 1, nombre: "Cáscara de plátano" },
+                { id: 2, nombre: "Restos de comida" },
+                { id: 3, nombre: "Cáscara de huevo" }
+            ],
+            inorganico: [
+                { id: 1, nombre: "Botella de plástico" },
+                { id: 2, nombre: "Lata de aluminio" },
+                { id: 3, nombre: "Bolsa de plástico" }
+            ]
+        };
 
-            function actualizarInterfaz(datos) {
-                if (datos.imagen_path) {
-                    $('#imagen-clasificada').attr('src', '/static/' + datos.imagen_path);
-                }
+        function verDetalle(tipo) {
+            const lista = document.getElementById('lista-residuos');
+            const titulo = document.getElementById('titulo-detalle');
+            lista.innerHTML = '';
+            titulo.innerText = `Detalles de Residuos ${tipo.charAt(0).toUpperCase() + tipo.slice(1)}`;
+            residuos[tipo].forEach(item => {
+                const li = document.createElement('li');
+                li.innerHTML = `<strong>ID: ${item.id}:</strong> ${item.nombre} 
+                                <button class="clean-button" onclick="eliminarResiduo('${tipo}', ${item.id})">Eliminar</button>`;
+                lista.appendChild(li);
+            });
+            document.querySelector('.vista-monitor').style.display = 'none';
+            document.getElementById('detalle-residuos').style.display = 'block';
+        }
 
-                $('#residuos-organicos').text(datos.organicos || 0);
-                $('#residuos-inorganicos').text(datos.inorganicos || 0);
+        function volver() {
+            document.querySelector('.vista-monitor').style.display = 'block';
+            document.getElementById('detalle-residuos').style.display = 'none';
+        }
 
-                const totalResiduos = (datos.organicos || 0) + (datos.inorganicos || 0);
-                const estadoContenedor = $('#estado-contenedor');
+        function eliminarResiduo(tipo, id) {
+            residuos[tipo] = residuos[tipo].filter(item => item.id !== id);
+            actualizarBarra(tipo);
+            verDetalle(tipo);
+        }
 
-                if (totalResiduos >= 20) {
-                    estadoContenedor.text('Lleno').addClass('no-biodegradable');
-                } else {
-                    estadoContenedor.text('Disponible').addClass('biodegradable');
-                }
-            }
+        function actualizarBarra(tipo) {
+            const cantidad = residuos[tipo].length;
+            document.getElementById(`residuos-${tipo}`).innerText = cantidad;
+            document.getElementById(`barra-${tipo}`).style.height = `${(cantidad / 20) * 100}%`;
+        }
 
-            function buscarActualizaciones() {
-                $.ajax({
-                    url: '/verificar_actualizacion',
-                    type: 'GET',
-                    data: { timestamp: ultimoTimestamp },
-                    success: function(response) {
-                        if (response.actualizado) {
-                            ultimoTimestamp = response.timestamp;
-                            actualizarInterfaz(response.datos);
-                        }
-                        buscarActualizaciones();
-                    },
-                    error: function(error) {
-                        console.error(error);
-                        setTimeout(buscarActualizaciones, 5000);
-                    }
-                });
-            }
-
-            buscarActualizaciones();
+        document.addEventListener('DOMContentLoaded', () => {
+            actualizarBarra('organico');
+            actualizarBarra('inorganico');
         });
     </script>
 </body>
